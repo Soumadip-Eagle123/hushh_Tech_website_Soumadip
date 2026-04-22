@@ -1,0 +1,65 @@
+{
+  "id": "backend",
+  "role": "owner",
+  "owner_family": "backend",
+  "primary_scope": "backend-intake",
+  "description": "Use when a contributor PR touches Hushhtech API routes, runtime helpers, or backend behavior and the correct narrower backend spoke is not yet obvious.",
+  "owned_paths": [
+    "api",
+    "api/shared",
+    "server.js",
+    "supabase",
+    "cloud-run"
+  ],
+  "non_owned_paths": [
+    "backend-api-contracts",
+    "quality-contracts",
+    "security-audit",
+    "repo-operations"
+  ],
+  "task_types": [
+    "contribution-triage"
+  ],
+  "required_reads": [
+    "server.js",
+    "docs/reference/architecture/api-contracts.md",
+    "docs/project_context_map.md",
+    "package.json"
+  ],
+  "required_commands": [
+    "npm test",
+    "npx tsc --noEmit",
+    "npm run build:web"
+  ],
+  "verification_bundles": [
+    {
+      "id": "backend",
+      "commands": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ],
+      "tests": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ]
+    }
+  ],
+  "handoff_targets": [
+    "backend-api-contracts",
+    "oss-contribution-triage",
+    "quality-contracts",
+    "security-audit"
+  ],
+  "adjacent_skills": [
+    "backend-api-contracts",
+    "quality-contracts",
+    "security-audit"
+  ],
+  "risk_tags": [
+    "api-regression",
+    "runtime-regression",
+    "backend-drift"
+  ]
+}

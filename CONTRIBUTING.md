@@ -45,6 +45,19 @@ npm run security:audit
 - Re-trigger `/review` after a substantial PR update, after resolving requested changes, or when you want a fresh Gemini pass on the latest diff before maintainer review.
 - First-time or fork contributors may need maintainer approval before code-executing workflows can run.
 
+Maintainers triage PRs using an explicit decision rubric:
+
+1. `Merge`
+2. `Patch-and-merge`
+3. `Request changes`
+4. `Discard/close`
+
+Reference docs:
+
+- [Operations Reference](docs/reference/operations/README.md)
+- [Quality Reference](docs/reference/quality/README.md)
+- [Project Context Map](docs/project_context_map.md)
+
 Example:
 
 ```bash

@@ -1,0 +1,80 @@
+{
+  "id": "repo-operations",
+  "role": "owner",
+  "owner_family": "repo-operations",
+  "primary_scope": "repo-operations-intake",
+  "description": "Use when working on Hushhtech PR checks, CI/CD, branch protection, merge queue, deploys, env parity, or operational verification.",
+  "owned_paths": [
+    ".github/workflows",
+    "scripts/ci",
+    "scripts/security",
+    "scripts/check-production.sh",
+    "scripts/deploy-gcp.sh",
+    "scripts/deploy-location-geocode.sh",
+    "scripts/deploy-ria-intelligence-api.sh",
+    "scripts/gcloud-devops-setup.sh",
+    "scripts/refresh-vertex-ai-token.sh",
+    "scripts/setup-cloud-scheduler-token-refresh.sh",
+    "scripts/setup-token-refresh-cron.sh",
+    "scripts/update-supabase-auth-url.sh",
+    "docs/reference/operations/README.md",
+    "docs/reference/operations/ci-governance.md"
+  ],
+  "non_owned_paths": [
+    "oss-contribution-triage",
+    "frontend",
+    "backend",
+    "security-audit"
+  ],
+  "task_types": [
+    "contribution-triage"
+  ],
+  "required_reads": [
+    "docs/reference/operations/ci-governance.md",
+    "docs/reference/operations/README.md",
+    ".github/workflows/ci.yml",
+    ".github/workflows/pr-agent.yml",
+    ".github/workflows/pr-intake.yml",
+    "scripts/ci/orchestrate.sh"
+  ],
+  "required_commands": [
+    "npm run env:check",
+    "npm run lint:ci",
+    "npm run security:audit",
+    "bash scripts/ci/orchestrate.sh queue"
+  ],
+  "verification_bundles": [
+    {
+      "id": "repo-operations",
+      "commands": [
+        "npm run env:check",
+        "npm run lint:ci",
+        "npm run security:audit",
+        "bash scripts/ci/orchestrate.sh queue"
+      ],
+      "tests": [
+        "npm run env:check",
+        "npm run security:audit",
+        "bash scripts/ci/orchestrate.sh queue"
+      ]
+    }
+  ],
+  "handoff_targets": [
+    "oss-contribution-triage",
+    "quality-contracts",
+    "security-audit",
+    "frontend",
+    "backend"
+  ],
+  "adjacent_skills": [
+    "repo-context",
+    "oss-contribution-triage",
+    "quality-contracts",
+    "security-audit"
+  ],
+  "risk_tags": [
+    "ci-drift",
+    "ruleset-drift",
+    "deploy-governance-drift"
+  ]
+}

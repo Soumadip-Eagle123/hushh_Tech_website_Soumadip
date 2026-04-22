@@ -1,0 +1,79 @@
+{
+  "id": "oss-contribution-triage",
+  "role": "owner",
+  "owner_family": "oss-contribution-triage",
+  "primary_scope": "oss-contribution-triage-intake",
+  "description": "Use when a contributor opens a pull request and a maintainer needs to decide whether to merge, patch-and-merge, request changes, or discard/close it.",
+  "owned_paths": [
+    ".codex/workflows/contribution-triage",
+    "docs/reference/operations/oss-contribution-triage.md",
+    "docs/reference/operations/pr-decision-rubric.md",
+    ".codex/skills/oss-contribution-triage/references/decision-buckets.md"
+  ],
+  "non_owned_paths": [
+    "repo-operations",
+    "quality-contracts",
+    "security-audit",
+    "docs-governance",
+    "frontend",
+    "backend"
+  ],
+  "task_types": [
+    "contribution-triage"
+  ],
+  "required_reads": [
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "docs/reference/operations/ci-governance.md",
+    "docs/reference/operations/oss-contribution-triage.md",
+    "docs/reference/operations/pr-decision-rubric.md",
+    ".codex/skills/oss-contribution-triage/references/decision-buckets.md"
+  ],
+  "required_commands": [
+    "npm run env:check",
+    "npm run lint:ci",
+    "npm test",
+    "npx tsc --noEmit",
+    "npm run build:web"
+  ],
+  "verification_bundles": [
+    {
+      "id": "oss-contribution-triage",
+      "commands": [
+        "npm run env:check",
+        "npm run lint:ci",
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ],
+      "tests": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ]
+    }
+  ],
+  "handoff_targets": [
+    "repo-operations",
+    "quality-contracts",
+    "security-audit",
+    "docs-governance",
+    "frontend",
+    "frontend-design-system",
+    "backend",
+    "backend-api-contracts"
+  ],
+  "adjacent_skills": [
+    "repo-context",
+    "repo-operations",
+    "quality-contracts",
+    "security-audit",
+    "docs-governance",
+    "frontend",
+    "backend"
+  ],
+  "risk_tags": [
+    "maintainer-patch-risk",
+    "pr-triage-drift"
+  ]
+}

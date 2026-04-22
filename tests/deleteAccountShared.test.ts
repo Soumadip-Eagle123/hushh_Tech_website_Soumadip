@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { __testing as deleteAccountServiceTesting } from "../api/delete-account-service.js";
 import {
   DELETE_ACCOUNT_DELETED_SCOPES,
   DELETE_ACCOUNT_RETAINED_SCOPES,
@@ -83,6 +84,70 @@ describe("delete-account shared contract", () => {
         "https://example.supabase.co/storage/v1/object/public/assets/other/path.pdf"
       )
     ).toBeNull();
+  });
+
+  it("purges first-party analytics by user, session, and anonymous hash", async () => {
+    const mutations: Array<{
+      table: string;
+      column: string;
+      operator: "eq" | "in";
+      value: unknown;
+    }> = [];
+    const adminClient = {
+      from: (table: string) => ({
+        delete: () => ({
+          eq: (column: string, value: unknown) => {
+            mutations.push({ table, column, operator: "eq", value });
+            return Promise.resolve({ error: null });
+          },
+          in: (column: string, value: unknown) => {
+            mutations.push({ table, column, operator: "in", value });
+            return Promise.resolve({ error: null });
+          },
+        }),
+      }),
+    };
+
+    await deleteAccountServiceTesting.purgeUserData(adminClient, "user-1", {
+      siteAnalyticsAnonymousHashes: ["anon-hash-1"],
+      siteAnalyticsSessionIds: ["session-row-1"],
+      siteAnalyticsSessionKeys: ["session-key-1"],
+    });
+
+    expect(mutations).toEqual(
+      expect.arrayContaining([
+        {
+          table: "site_analytics_events",
+          column: "session_id",
+          operator: "in",
+          value: ["session-row-1"],
+        },
+        {
+          table: "site_analytics_events",
+          column: "session_key",
+          operator: "in",
+          value: ["session-key-1"],
+        },
+        {
+          table: "site_analytics_events",
+          column: "anonymous_id_hash",
+          operator: "in",
+          value: ["anon-hash-1"],
+        },
+        {
+          table: "site_analytics_events",
+          column: "user_id",
+          operator: "eq",
+          value: "user-1",
+        },
+        {
+          table: "site_analytics_sessions",
+          column: "anonymous_id_hash",
+          operator: "in",
+          value: ["anon-hash-1"],
+        },
+      ])
+    );
   });
 });
 

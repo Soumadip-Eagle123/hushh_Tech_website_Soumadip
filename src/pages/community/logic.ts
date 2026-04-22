@@ -15,6 +15,10 @@ import {
   checkAccessStatus,
   getNdaMetadata,
 } from "../../services/access/accessControlApi";
+import {
+  trackSearchEvent,
+  trackSiteEvent,
+} from "../../services/analytics/siteAnalytics";
 
 /* ── Constants ── */
 export const NDA_OPTION = "Sensitive Documents (NDA approval Req.)";
@@ -81,6 +85,7 @@ export const useCommunityListLogic = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const mountRef = useRef(true);
+  const lastTrackedSearchRef = useRef("");
   const { session } = useAuthSession();
 
   /* local posts */
@@ -256,6 +261,29 @@ export const useCommunityListLogic = () => {
     });
   }, [searchQuery, selectedCategory, pinnedAllContent, ndaPosts, ndaApproved]);
 
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!query) {
+      lastTrackedSearchRef.current = "";
+      return;
+    }
+
+    const trackingKey = `${selectedCategory}:${query.toLowerCase()}`;
+    if (lastTrackedSearchRef.current === trackingKey) return;
+
+    const timeoutId = window.setTimeout(() => {
+      lastTrackedSearchRef.current = trackingKey;
+      void trackSearchEvent(
+        "community",
+        query,
+        filteredContent.length,
+        "/community"
+      );
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [filteredContent.length, searchQuery, selectedCategory]);
+
   /* NDA check */
   const checkNda = useCallback(async () => {
     if (!session) {
@@ -292,12 +320,31 @@ export const useCommunityListLogic = () => {
         const ok = await checkNda();
         if (!ok) return;
       }
+      void trackSiteEvent("community_filter_selected", {
+        routePath: "/community",
+        routeGroup: "community",
+        properties: {
+          surface: "community",
+          category: cat,
+        },
+      });
       setSelectedCategory(cat);
     },
     [checkNda]
   );
 
   const handleBackClick = useCallback(() => navigate(-1), [navigate]);
+  const handlePostClick = useCallback((post: UnifiedPost) => {
+    void trackSiteEvent("community_result_clicked", {
+      routePath: "/community",
+      routeGroup: "community",
+      properties: {
+        surface: "community",
+        category: post.category || "unknown",
+        result: post.isApiReport ? "api-report" : "local-post",
+      },
+    });
+  }, []);
 
   return {
     /* data */
@@ -320,6 +367,7 @@ export const useCommunityListLogic = () => {
     /* actions */
     onCategoryChange,
     handleBackClick,
+    handlePostClick,
     setNdaApproved,
     /* helpers (re-exported for UI) */
     getPostDescription,

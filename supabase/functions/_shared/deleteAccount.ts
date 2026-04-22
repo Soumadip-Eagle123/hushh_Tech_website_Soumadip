@@ -54,6 +54,8 @@ export const DELETE_ACCOUNT_SCHEMA_COVERED_TABLES = [
   "plaid_sync_cursors",
   "plaid_transactions",
   "public_chat_messages",
+  "site_analytics_events",
+  "site_analytics_sessions",
   "swipe_actions",
   "user_agent_selections",
   "user_enriched_profiles",

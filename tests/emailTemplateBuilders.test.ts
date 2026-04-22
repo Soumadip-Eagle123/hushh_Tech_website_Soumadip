@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { buildCoinsCreditEmailHtml } from "../supabase/functions/coins-credit-notification/template";
 import { buildCoinsDeductionEmailHtml } from "../supabase/functions/coins-deduction-notification/template";
 import { buildNDANotificationHtml } from "../supabase/functions/nda-signed-notification/template";
+import {
+  buildVaultAccessNotificationHtml,
+  buildVaultAccessSubject,
+} from "../supabase/functions/vault-access-notification/template";
 
 function expectEmailSafeMarkup(html: string) {
   expect(html).not.toMatch(/tailwindcss/i);
@@ -110,6 +114,39 @@ describe("Email template builders", () => {
     expect(html).not.toContain(">?<");
     expect(html).not.toContain(">C<");
     expect(html).toContain("https://www.youtube.com/@hushhai");
+    expectEmailSafeMarkup(html);
+  });
+
+  it("renders Vault access notifications as metadata-only email", () => {
+    const html = buildVaultAccessNotificationHtml({
+      eventType: "reshare.requested",
+      itemName: "Series A SAFE",
+      itemType: "document",
+      ownerEmail: "owner@example.com",
+      actorEmail: "actor@example.com",
+      requesterEmail: "requester@example.com",
+      targetEmail: "target@example.com",
+      reason: "Needs access for diligence review.",
+      actionUrl: "https://vault.hushh.ai/access/request_123",
+    });
+
+    expect(buildVaultAccessSubject("reshare.requested", "Series A SAFE")).toBe(
+      "[Hushh Vault] A reshare needs review: Series A SAFE"
+    );
+    expect(html).toContain("Reshare Requested");
+    expect(html).toContain("Access Metadata");
+    expect(html).toContain("Series A SAFE");
+    expect(html).toContain("owner@example.com");
+    expect(html).toContain("requester@example.com");
+    expect(html).toContain("target@example.com");
+    expect(html).toContain("Review Request");
+    expect(html).toContain("https://vault.hushh.ai/access/request_123");
+    expect(html).toContain("No Vault secrets, plaintext values, attachments, or raw item data are included.");
+    expect(html).toContain("cid:hushh-icon-shield");
+    expect(html).toContain("cid:hushh-icon-calendar-check");
+    expect(html).toContain("cid:hushh-icon-analytics");
+    expect(html).not.toContain("secretValue");
+    expect(html).not.toContain("plaintextValue");
     expectEmailSafeMarkup(html);
   });
 });

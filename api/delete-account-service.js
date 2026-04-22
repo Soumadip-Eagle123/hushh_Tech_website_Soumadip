@@ -500,7 +500,7 @@ async function archivePaymentAuditRows(adminClient, paymentRows, userId, auditSe
 async function collectDeleteContext(adminClient, userId) {
   const userIdText = String(userId);
 
-  const [profileRows, investorAgentRows, leadRows, hushhAiUserRows, intelligenceUserRows, ndaSignatureRows, onboardingRows, plaidItemRows, kycProfileRows, financialRows, ceoPaymentRows, consumerConversationRows] =
+  const [profileRows, investorAgentRows, leadRows, hushhAiUserRows, intelligenceUserRows, ndaSignatureRows, onboardingRows, plaidItemRows, kycProfileRows, financialRows, ceoPaymentRows, consumerConversationRows, siteAnalyticsSessionRows] =
     await Promise.all([
       selectEq(adminClient, "investor_profiles", "slug", "user_id", userId),
       selectEq(adminClient, "investor_agents", "slug", "user_id", userId),
@@ -520,6 +520,13 @@ async function collectDeleteContext(adminClient, userId) {
         userId
       ),
       selectEq(adminClient, "conversations", "id", "consumer_id", userId),
+      selectEq(
+        adminClient,
+        "site_analytics_sessions",
+        "id,session_key,anonymous_id_hash",
+        "user_id",
+        userId
+      ),
     ]);
 
   const leadIds = mapColumnValues(leadRows, "id");
@@ -585,6 +592,12 @@ async function collectDeleteContext(adminClient, userId) {
       ...mapColumnValues(profileRows, "slug"),
       ...mapColumnValues(investorAgentRows, "slug"),
     ]),
+    siteAnalyticsAnonymousHashes: mapColumnValues(
+      siteAnalyticsSessionRows,
+      "anonymous_id_hash"
+    ),
+    siteAnalyticsSessionIds: mapColumnValues(siteAnalyticsSessionRows, "id"),
+    siteAnalyticsSessionKeys: mapColumnValues(siteAnalyticsSessionRows, "session_key"),
   };
 }
 
@@ -598,6 +611,44 @@ async function purgeUserData(adminClient, userId, context) {
   await deleteEq(adminClient, "lead_requests", "user_id", userId);
 
   await deleteEq(adminClient, "analytics_events", "user_id", userId);
+  await deleteIn(
+    adminClient,
+    "site_analytics_events",
+    "session_id",
+    context.siteAnalyticsSessionIds
+  );
+  await deleteIn(
+    adminClient,
+    "site_analytics_events",
+    "session_key",
+    context.siteAnalyticsSessionKeys
+  );
+  await deleteIn(
+    adminClient,
+    "site_analytics_events",
+    "anonymous_id_hash",
+    context.siteAnalyticsAnonymousHashes
+  );
+  await deleteEq(adminClient, "site_analytics_events", "user_id", userId);
+  await deleteIn(
+    adminClient,
+    "site_analytics_sessions",
+    "id",
+    context.siteAnalyticsSessionIds
+  );
+  await deleteIn(
+    adminClient,
+    "site_analytics_sessions",
+    "session_key",
+    context.siteAnalyticsSessionKeys
+  );
+  await deleteIn(
+    adminClient,
+    "site_analytics_sessions",
+    "anonymous_id_hash",
+    context.siteAnalyticsAnonymousHashes
+  );
+  await deleteEq(adminClient, "site_analytics_sessions", "user_id", userId);
   await deleteEq(adminClient, "blocked_agents", "user_id", userId);
   await deleteEq(adminClient, "consumer_profiles", "user_id", userId);
   await deleteEq(adminClient, "delete_requests", "user_id", userId);
@@ -758,4 +809,6 @@ export async function executeDeleteAccount({
 export const __testing = {
   buildSignedNdaAssetPathFromUrl,
   buildFormerUserIdHash,
+  collectDeleteContext,
+  purgeUserData,
 };

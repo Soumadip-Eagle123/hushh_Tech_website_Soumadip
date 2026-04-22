@@ -1,0 +1,95 @@
+{
+  "id": "contribution-triage",
+  "title": "OSS Contribution Triage",
+  "goal": "Classify an incoming pull request into Merge, Patch-and-merge, Request changes, or Discard/close after reading the agent review, CI state, diff surface, and risk profile.",
+  "owner_skill": "oss-contribution-triage",
+  "default_spoke": null,
+  "task_type": "contribution-triage",
+  "affected_surfaces": [
+    ".github/workflows",
+    "scripts/ci",
+    "cloud-run",
+    "src",
+    "api",
+    "supabase",
+    "tests",
+    "docs"
+  ],
+  "required_reads": [
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "docs/project_context_map.md",
+    "docs/reference/operations/ci-governance.md",
+    "docs/reference/operations/oss-contribution-triage.md",
+    "docs/reference/operations/pr-decision-rubric.md",
+    "docs/reference/quality/pr-impact-checklist.md"
+  ],
+  "required_commands": [
+    "npm run dco:check",
+    "npm run security:gitleaks",
+    "npm run env:check",
+    "npm run pr:hygiene",
+    "npm run lint:ci",
+    "npm run security:audit",
+    "npm test",
+    "npx tsc --noEmit",
+    "npm run build:web"
+  ],
+  "verification_bundle": {
+    "id": "contribution-triage",
+    "commands": [
+      "npm run dco:check",
+      "npm run security:gitleaks",
+      "npm run env:check",
+      "npm run pr:hygiene",
+      "npm run lint:ci",
+      "npm run security:audit",
+      "npm test",
+      "npx tsc --noEmit",
+      "npm run build:web"
+    ],
+    "tests": [
+      "npm run dco:check",
+      "npm run security:gitleaks",
+      "npm run env:check",
+      "npm run pr:hygiene",
+      "npm run lint:ci",
+      "npm run security:audit",
+      "npm test",
+      "npx tsc --noEmit",
+      "npm run build:web"
+    ]
+  },
+  "deliverables": [
+    "selected decision bucket",
+    "reason and risk level",
+    "required checks",
+    "patch-allowed decision",
+    "next owner skill or maintainer action"
+  ],
+  "impact_fields": [
+    "PR surface",
+    "Agent review state",
+    "CI state",
+    "Auth/env/security risk",
+    "Required proof",
+    "Patch size and scope",
+    "Next step"
+  ],
+  "handoff_chain": [
+    "repo-context",
+    "repo-operations",
+    "quality-contracts",
+    "security-audit",
+    "docs-governance",
+    "frontend",
+    "frontend-design-system",
+    "backend",
+    "backend-api-contracts"
+  ],
+  "common_failures": [
+    "patching risky auth or env code that should go back to the contributor",
+    "trusting green checks without verifying the right proof exists",
+    "keeping oversized or mixed-scope PRs open when closing is cleaner"
+  ]
+}

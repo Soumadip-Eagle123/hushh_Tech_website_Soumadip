@@ -1,0 +1,49 @@
+name: Signalkeeper Preflight
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - review_requested
+
+permissions:
+  checks: read
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: signalkeeper-preflight-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20.19.0"
+
+jobs:
+  intake:
+    name: Signalkeeper Preflight
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare trusted workspace
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Publish Signalkeeper preflight summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEW_LANE_NAME: "Hushh Signalkeeper"
+          SEMANTIC_GUARD_NAME: "Semantic PR Guard"
+          PR_VALIDATION_CHECKS: "DCO, Secret Scan, Env Contract Check, Reviewer Context & Compliance, PR Hygiene, Web Validation, Lint, Security Audit, CI Status Gate"
+        run: node scripts/ci/publish-signalkeeper-preflight.mjs

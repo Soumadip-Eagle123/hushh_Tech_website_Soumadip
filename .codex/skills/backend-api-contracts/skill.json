@@ -1,0 +1,67 @@
+{
+  "id": "backend-api-contracts",
+  "role": "spoke",
+  "owner_family": "backend",
+  "primary_scope": "backend-api-contracts",
+  "description": "Use when a contributor PR changes Hushhtech API request or response behavior, route semantics, or page-to-API contract alignment.",
+  "owned_paths": [
+    "api/public-investor-profile.js",
+    "api/google-wallet-pass.js",
+    "api/wallet-pass.js",
+    "api/delete-account.js",
+    "api/career-application.js",
+    "api/metrics",
+    "api/analytics",
+    "docs/reference/architecture/api-contracts.md"
+  ],
+  "non_owned_paths": [
+    "backend",
+    "quality-contracts",
+    "security-audit",
+    "frontend"
+  ],
+  "task_types": [
+    "contribution-triage"
+  ],
+  "required_reads": [
+    "docs/reference/architecture/api-contracts.md",
+    "server.js",
+    "package.json"
+  ],
+  "required_commands": [
+    "npm test",
+    "npx tsc --noEmit",
+    "npm run build:web"
+  ],
+  "verification_bundles": [
+    {
+      "id": "backend-api-contracts",
+      "commands": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ],
+      "tests": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ]
+    }
+  ],
+  "handoff_targets": [
+    "backend",
+    "oss-contribution-triage",
+    "quality-contracts",
+    "security-audit"
+  ],
+  "adjacent_skills": [
+    "backend",
+    "quality-contracts",
+    "security-audit",
+    "frontend"
+  ],
+  "risk_tags": [
+    "api-contract-drift",
+    "route-behavior-regression"
+  ]
+}

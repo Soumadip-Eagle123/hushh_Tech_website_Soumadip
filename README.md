@@ -31,6 +31,21 @@ Repository URL: https://github.com/hushh-labs/hushh_Tech_website
 - deployments are gated by post-merge smoke and promoted by approved SHAs instead of raw branch pushes
 - fork PRs may need maintainer approval before untrusted code-executing workflows can run
 
+## Maintainer PR triage
+
+Maintainers now have an explicit OSS contribution triage flow on top of agent review and CI:
+
+1. classify each incoming PR as `Merge`, `Patch-and-merge`, `Request changes`, or `Discard/close`
+2. use the contribution-triage workflow and skill routing docs to decide whether maintainer patching is safe
+3. route bounded follow-up work into the correct frontend, backend, docs, security, or repo-operations owner
+
+See:
+
+- [Operations Reference](docs/reference/operations/README.md)
+- [Quality Reference](docs/reference/quality/README.md)
+- [Project Context Map](docs/project_context_map.md)
+- [Codex Skills](.codex/skills/README.md)
+
 ## Safe contribution areas
 
 - frontend components and routes under `src/`

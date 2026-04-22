@@ -1,3 +1,8 @@
+import {
+  sanitizeAnalyticsPath,
+  trackPageViewEvent,
+} from "./siteAnalytics";
+
 const GOOGLE_ANALYTICS_TRACKING_ID = "G-R58S9WWPM0";
 const GOOGLE_ANALYTICS_SCRIPT_SRC = `https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_TRACKING_ID}`;
 const DUPLICATE_PAGE_VIEW_WINDOW_MS = 1000;
@@ -59,7 +64,7 @@ export function trackPageView(pathname: string, search = "", hash = "") {
 
   initializeGoogleAnalytics();
 
-  const pagePath = `${pathname || "/"}${search}${hash}`;
+  const pagePath = sanitizeAnalyticsPath(pathname || "/", search, hash);
   const now = Date.now();
   if (
     pagePath === lastTrackedPageKey &&
@@ -76,6 +81,8 @@ export function trackPageView(pathname: string, search = "", hash = "") {
     page_location: `${window.location.origin}${pagePath}`,
     page_path: pagePath,
   });
+
+  trackPageViewEvent(pathname, search, hash);
 }
 
 export { GOOGLE_ANALYTICS_TRACKING_ID };

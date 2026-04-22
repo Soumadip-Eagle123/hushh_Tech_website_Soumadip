@@ -121,6 +121,10 @@ jobs:
           supabase_url="$(gcloud secrets versions access latest --project="$SHARED_SECRETS_PROJECT" --secret="SUPABASE_URL")"
           supabase_anon_key="$(gcloud secrets versions access latest --project="$SHARED_SECRETS_PROJECT" --secret="SUPABASE_ANON_KEY")"
           supabase_service_role_key="$(gcloud secrets versions access latest --project="$SHARED_SECRETS_PROJECT" --secret="SUPABASE_SERVICE_ROLE_KEY")"
+          analytics_hash_salt="$(gcloud secrets versions access latest --project="$SHARED_SECRETS_PROJECT" --secret="ANALYTICS_HASH_SALT" 2>/dev/null || true)"
+          ga4_property_id="$(gcloud secrets versions access latest --project="$SHARED_SECRETS_PROJECT" --secret="GA4_PROPERTY_ID" 2>/dev/null || true)"
+          ga4_allowed_hostnames="$(gcloud secrets versions access latest --project="$SHARED_SECRETS_PROJECT" --secret="GA4_ALLOWED_HOSTNAMES" 2>/dev/null || true)"
+          search_console_site_url="$(gcloud secrets versions access latest --project="$SHARED_SECRETS_PROJECT" --secret="SEARCH_CONSOLE_SITE_URL" 2>/dev/null || true)"
           if [ -z "$supabase_url" ] || [ -z "$supabase_anon_key" ]; then
             echo "::error::Supabase web auth secrets are empty"
             exit 1
@@ -132,10 +136,24 @@ jobs:
           echo "::add-mask::$supabase_url"
           echo "::add-mask::$supabase_anon_key"
           echo "::add-mask::$supabase_service_role_key"
+          [ -n "$analytics_hash_salt" ] && echo "::add-mask::$analytics_hash_salt"
+          [ -n "$ga4_property_id" ] && echo "::add-mask::$ga4_property_id"
+          [ -n "$ga4_allowed_hostnames" ] && echo "::add-mask::$ga4_allowed_hostnames"
+          [ -n "$search_console_site_url" ] && echo "::add-mask::$search_console_site_url"
           printf 'VITE_SUPABASE_URL=%s\n' "$supabase_url" >> "$GITHUB_ENV"
           printf 'VITE_SUPABASE_ANON_KEY=%s\n' "$supabase_anon_key" >> "$GITHUB_ENV"
           printf 'SUPABASE_URL=%s\n' "$supabase_url" >> "$GITHUB_ENV"
           printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$supabase_service_role_key" >> "$GITHUB_ENV"
+          [ -n "$analytics_hash_salt" ] && printf 'ANALYTICS_HASH_SALT=%s\n' "$analytics_hash_salt" >> "$GITHUB_ENV"
+          [ -n "$ga4_property_id" ] && printf 'GA4_PROPERTY_ID=%s\n' "$ga4_property_id" >> "$GITHUB_ENV"
+          [ -n "$ga4_allowed_hostnames" ] && printf 'GA4_ALLOWED_HOSTNAMES=%s\n' "$ga4_allowed_hostnames" >> "$GITHUB_ENV"
+          [ -n "$search_console_site_url" ] && printf 'SEARCH_CONSOLE_SITE_URL=%s\n' "$search_console_site_url" >> "$GITHUB_ENV"
+          printf 'GCP_MONITORING_PROJECT_ID=hushh-tech-uat\n' >> "$GITHUB_ENV"
+          printf 'GCP_CLOUD_RUN_REGION=us-central1\n' >> "$GITHUB_ENV"
+          printf 'GCP_CLOUD_RUN_SERVICES=hushh-tech-website\n' >> "$GITHUB_ENV"
+          printf 'SEARCH_CONSOLE_TYPE=web\n' >> "$GITHUB_ENV"
+          printf 'SEARCH_CONSOLE_DATA_STATE=all\n' >> "$GITHUB_ENV"
+          printf 'SEARCH_CONSOLE_ROW_LIMIT=25\n' >> "$GITHUB_ENV"
 
       # 3. Build Vite app in runner (FAST — no Docker needed)
       - name: Validate client auth env
@@ -160,7 +178,14 @@ jobs:
 
       # 4. Deploy pre-built dist/ to Cloud Run (runtime-only Dockerfile)
       - name: Deploy to Cloud Run
+        shell: bash
         run: |
+          runtime_env="NODE_ENV=staging,SUPABASE_URL=${SUPABASE_URL},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}"
+          for name in ANALYTICS_HASH_SALT GA4_PROPERTY_ID GA4_ALLOWED_HOSTNAMES GCP_MONITORING_PROJECT_ID GCP_CLOUD_RUN_REGION GCP_CLOUD_RUN_SERVICES SEARCH_CONSOLE_SITE_URL SEARCH_CONSOLE_TYPE SEARCH_CONSOLE_DATA_STATE SEARCH_CONSOLE_ROW_LIMIT; do
+            if [ -n "${!name:-}" ]; then
+              runtime_env="${runtime_env},${name}=${!name}"
+            fi
+          done
           gcloud run deploy hushh-tech-website \
             --source . \
             --project=hushh-tech-uat \
@@ -172,7 +197,7 @@ jobs:
             --min-instances=0 \
             --max-instances=3 \
             --port=8080 \
-            --update-env-vars="NODE_ENV=staging,SUPABASE_URL=${SUPABASE_URL},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" \
+            --update-env-vars="$runtime_env" \
             --clear-base-image \
             --quiet
 

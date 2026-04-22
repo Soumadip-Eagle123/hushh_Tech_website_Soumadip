@@ -1,0 +1,66 @@
+{
+  "id": "quality-contracts",
+  "role": "spoke",
+  "owner_family": "oss-contribution-triage",
+  "primary_scope": "quality-contracts",
+  "description": "Use when deciding which checks are authoritative for a Hushhtech PR and whether the right proof exists for the changed behavior.",
+  "owned_paths": [
+    "tests",
+    "vitest.config.ts",
+    "docs/reference/quality/pr-impact-checklist.md"
+  ],
+  "non_owned_paths": [
+    "oss-contribution-triage",
+    "repo-operations",
+    "frontend",
+    "backend"
+  ],
+  "task_types": [
+    "contribution-triage"
+  ],
+  "required_reads": [
+    "docs/reference/quality/pr-impact-checklist.md",
+    "package.json",
+    "vitest.config.ts",
+    "docs/reference/operations/ci-governance.md"
+  ],
+  "required_commands": [
+    "npm test",
+    "npx tsc --noEmit",
+    "npm run build:web",
+    "npm run smoke:ci"
+  ],
+  "verification_bundles": [
+    {
+      "id": "quality-contracts",
+      "commands": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web",
+        "npm run smoke:ci"
+      ],
+      "tests": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ]
+    }
+  ],
+  "handoff_targets": [
+    "oss-contribution-triage",
+    "repo-operations",
+    "security-audit",
+    "frontend",
+    "backend"
+  ],
+  "adjacent_skills": [
+    "oss-contribution-triage",
+    "repo-operations",
+    "security-audit"
+  ],
+  "risk_tags": [
+    "missing-proof",
+    "oversized-verification",
+    "false-confidence"
+  ]
+}

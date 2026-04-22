@@ -1,0 +1,76 @@
+{
+  "id": "security-audit",
+  "role": "owner",
+  "owner_family": "security-audit",
+  "primary_scope": "security-audit-intake",
+  "description": "Use when auth, env, secrets, fail-closed behavior, or sensitive API routes make a Hushhtech PR risky to patch or merge.",
+  "owned_paths": [
+    "src/auth",
+    "src/resources/config",
+    "api/delete-account-service.js",
+    "api/delete-account.js",
+    "api/public-investor-profile.js",
+    "api/send-email-notification.js",
+    "api/gemini-ephemeral-token.js",
+    "api/google-wallet-pass.js",
+    "api/wallet-pass.js",
+    "docs/HUSHH_TECH_SECRET_RUNBOOK.md",
+    "docs/OPEN_SOURCE_SECRET_AUDIT.md",
+    "docs/HUSHH_TECH_SECURITY_AUDIT.md"
+  ],
+  "non_owned_paths": [
+    "repo-operations",
+    "oss-contribution-triage",
+    "frontend",
+    "backend"
+  ],
+  "task_types": [
+    "contribution-triage"
+  ],
+  "required_reads": [
+    "SECURITY.md",
+    "docs/HUSHH_TECH_SECRET_RUNBOOK.md",
+    "docs/OPEN_SOURCE_SECRET_AUDIT.md",
+    "docs/HUSHH_TECH_SECURITY_AUDIT.md",
+    "scripts/ci/check-env-contract.mjs"
+  ],
+  "required_commands": [
+    "npm run env:check",
+    "npm run security:gitleaks",
+    "npm run security:audit"
+  ],
+  "verification_bundles": [
+    {
+      "id": "security-audit",
+      "commands": [
+        "npm run env:check",
+        "npm run security:gitleaks",
+        "npm run security:audit"
+      ],
+      "tests": [
+        "npm run env:check",
+        "npm run security:gitleaks",
+        "npm run security:audit"
+      ]
+    }
+  ],
+  "handoff_targets": [
+    "oss-contribution-triage",
+    "repo-operations",
+    "quality-contracts",
+    "frontend",
+    "backend"
+  ],
+  "adjacent_skills": [
+    "oss-contribution-triage",
+    "repo-operations",
+    "quality-contracts",
+    "backend"
+  ],
+  "risk_tags": [
+    "auth-regression",
+    "secret-exposure",
+    "env-drift",
+    "fail-closed-risk"
+  ]
+}

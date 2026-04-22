@@ -217,6 +217,56 @@ function SummaryCell({
   );
 }
 
+function SearchPerformanceList({
+  title,
+  rows,
+  labelKey,
+}: {
+  title: string;
+  rows: Array<Record<string, unknown>>;
+  labelKey: string;
+}) {
+  return (
+    <div className="rounded-[1.4rem] border border-[#e8dfcb] bg-white px-4 py-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#244d86]">
+        {title}
+      </p>
+      <div className="mt-3 space-y-3">
+        {rows.length > 0 ? (
+          rows.slice(0, 5).map((row, index) => {
+            const hasSearchMetrics = "clicks" in row || "impressions" in row;
+            const primaryValue = hasSearchMetrics ? row.clicks : row.activeUsers;
+            const secondaryValue = hasSearchMetrics ? row.impressions : row.sessions;
+
+            return (
+              <div
+                key={`${title}-${index}`}
+                className="flex items-start justify-between gap-4 border-b border-gray-100 pb-2 last:border-b-0 last:pb-0"
+              >
+                <p className="min-w-0 flex-1 truncate text-sm font-medium text-black">
+                  {String(row[labelKey] || "Unknown")}
+                </p>
+                <div className="shrink-0 text-right text-xs text-gray-500">
+                  <p>
+                    {formatNumber(primaryValue as number | null)}{" "}
+                    {hasSearchMetrics ? "clicks" : "users"}
+                  </p>
+                  <p>
+                    {formatNumber(secondaryValue as number | null)}{" "}
+                    {hasSearchMetrics ? "impressions" : "sessions"}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <p className="text-sm leading-6 text-gray-500">No public-safe rows yet.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function FunnelStackRow({
   label,
   value,
@@ -337,6 +387,10 @@ export default function MetricsPage() {
         : "Live";
   const businessOverview = summary.data?.businessFunnel.overview;
   const trafficOverview = summary.data?.traffic.overview;
+  const audienceOverview = summary.data?.audience;
+  const searchOverview = summary.data?.search;
+  const searchPerformance = summary.data?.searchPerformance;
+  const gcpOverview = summary.data?.gcp;
   const funnelBaseline = businessOverview?.signups || 0;
   const funnelStack = [
     {
@@ -614,6 +668,123 @@ export default function MetricsPage() {
               {summary.error}
             </section>
           )}
+
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              eyebrow="Audience"
+              label="Daily active users"
+              value={formatNumber(
+                audienceOverview?.dau ?? trafficOverview?.active1DayUsers
+              )}
+              hint={audienceOverview?.source || "GA4 fallback"}
+            />
+            <MetricCard
+              eyebrow="Audience"
+              label="Monthly active users"
+              value={formatNumber(
+                audienceOverview?.mau ?? trafficOverview?.active28DayUsers
+              )}
+              hint="Distinct public-safe visitors"
+            />
+            <MetricCard
+              eyebrow="Search"
+              label="Searches captured"
+              value={formatNumber(searchOverview?.totalSearches)}
+              hint={
+                searchOverview?.noResultRate == null
+                  ? "No search data yet"
+                  : `${formatPercent(searchOverview.noResultRate)} no-result rate`
+              }
+            />
+            <MetricCard
+              eyebrow="GCP"
+              label="Cloud Run requests"
+              value={formatNumber(gcpOverview?.requestCount)}
+              hint={
+                gcpOverview?.available
+                  ? `${formatPercent(gcpOverview.errorRate)} error rate`
+                  : "Monitoring unavailable"
+              }
+            />
+            <MetricCard
+              eyebrow="SEO"
+              label="Google Search clicks"
+              value={formatNumber(searchPerformance?.overview.clicks)}
+              hint={searchPerformance?.available ? "Search Console" : "Unavailable"}
+            />
+            <MetricCard
+              eyebrow="SEO"
+              label="Google impressions"
+              value={formatNumber(searchPerformance?.overview.impressions)}
+              hint={searchPerformance?.dataState || "Search Console"}
+            />
+            <MetricCard
+              eyebrow="SEO"
+              label="Google CTR"
+              value={formatPercent(searchPerformance?.overview.ctr)}
+              hint="Organic search result CTR"
+            />
+            <MetricCard
+              eyebrow="SEO"
+              label="Average position"
+              value={
+                searchPerformance?.overview.averagePosition == null
+                  ? "—"
+                  : searchPerformance.overview.averagePosition.toFixed(1)
+              }
+              hint={searchPerformance?.realtime ? "Realtime" : "Fresh, not realtime"}
+            />
+          </section>
+
+          <section className="rounded-[2rem] border border-[#e8dfcb] bg-[#fffaf0] p-6 shadow-sm">
+            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#244d86]">
+                  Search Console
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-black">
+                  Organic search visibility
+                </h2>
+              </div>
+              <p className="max-w-2xl text-sm leading-6 text-[#5f5a4d]">
+                Query and page rows are public-safe top lists only. State/region
+                comes from GA4 because Search Console does not expose state.
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <SearchPerformanceList
+                title="Queries"
+                rows={searchPerformance?.queries || []}
+                labelKey="query"
+              />
+              <SearchPerformanceList
+                title="Page URLs"
+                rows={searchPerformance?.pages || []}
+                labelKey="pageUrl"
+              />
+              <SearchPerformanceList
+                title="Countries"
+                rows={searchPerformance?.countries || []}
+                labelKey="country"
+              />
+              <SearchPerformanceList
+                title="Device"
+                rows={searchPerformance?.devices || []}
+                labelKey="device"
+              />
+              <SearchPerformanceList
+                title="State / region"
+                rows={searchPerformance?.state?.byRegion || []}
+                labelKey="state"
+              />
+              <SearchPerformanceList
+                title="Search appearance"
+                rows={searchPerformance?.searchAppearance || []}
+                labelKey="appearance"
+              />
+            </div>
+          </section>
 
           <section className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
             <div className="rounded-[2rem] border border-[#e8dfcb] bg-white p-6 shadow-sm">

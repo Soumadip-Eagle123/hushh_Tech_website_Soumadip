@@ -19,8 +19,10 @@ npx vitest run "${SMOKE_SUITES[@]}"
 if [ -n "${SMOKE_REPORT_PATH:-}" ]; then
   node -e '
     const fs = require("fs");
+    const { dirname } = require("path");
     const path = process.argv[1];
     const suites = process.argv.slice(2);
+    fs.mkdirSync(dirname(path), { recursive: true });
     fs.writeFileSync(
       path,
       JSON.stringify(

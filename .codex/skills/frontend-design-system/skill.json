@@ -1,0 +1,65 @@
+{
+  "id": "frontend-design-system",
+  "role": "spoke",
+  "owner_family": "frontend",
+  "primary_scope": "frontend-design-system",
+  "description": "Use when a contributor PR changes shared Hushhtech UI primitives, shell chrome, theme behavior, or reusable visual patterns.",
+  "owned_paths": [
+    "src/components/ui",
+    "src/components/hushh-tech-back-header",
+    "src/components/hushh-tech-cta",
+    "src/components/hushh-tech-faq-sheet",
+    "src/components/hushh-tech-footer",
+    "src/components/hushh-tech-header",
+    "src/components/hushh-tech-nav-drawer",
+    "src/theme",
+    "docs/reference/quality/design-system.md"
+  ],
+  "non_owned_paths": [
+    "frontend",
+    "quality-contracts",
+    "security-audit"
+  ],
+  "task_types": [
+    "contribution-triage"
+  ],
+  "required_reads": [
+    "docs/reference/quality/design-system.md",
+    "package.json"
+  ],
+  "required_commands": [
+    "npm test",
+    "npx tsc --noEmit",
+    "npm run build:web"
+  ],
+  "verification_bundles": [
+    {
+      "id": "frontend-design-system",
+      "commands": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ],
+      "tests": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ]
+    }
+  ],
+  "handoff_targets": [
+    "frontend",
+    "oss-contribution-triage",
+    "quality-contracts",
+    "security-audit"
+  ],
+  "adjacent_skills": [
+    "frontend",
+    "quality-contracts",
+    "security-audit"
+  ],
+  "risk_tags": [
+    "shared-ui-regression",
+    "design-system-drift"
+  ]
+}

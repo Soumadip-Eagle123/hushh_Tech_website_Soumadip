@@ -44,6 +44,14 @@
     "LOOKER_STUDIO_EMBED_URL",
     "GA4_PROPERTY_ID",
     "GA4_ALLOWED_HOSTNAMES",
+    "ANALYTICS_HASH_SALT",
+    "GCP_MONITORING_PROJECT_ID",
+    "GCP_CLOUD_RUN_REGION",
+    "GCP_CLOUD_RUN_SERVICES",
+    "SEARCH_CONSOLE_SITE_URL",
+    "SEARCH_CONSOLE_TYPE",
+    "SEARCH_CONSOLE_DATA_STATE",
+    "SEARCH_CONSOLE_ROW_LIMIT",
     "APP_STORE_API_KEY_ID",
     "APP_STORE_ISSUER_ID",
     "N8N_BASIC_AUTH_USER",
@@ -85,12 +93,20 @@
       "api/public-investor-profile.js",
       "api/delete-account-service.js",
       "api/send-email-notification.js",
-      "api/metrics/service.js"
+      "api/metrics/service.js",
+      "api/analytics/collect.js"
     ],
     "SUPABASE_SERVICE_ROLE_KEY": [
       "api/public-investor-profile.js",
       "api/delete-account-service.js",
       "api/send-email-notification.js",
+      "api/metrics/service.js",
+      "api/analytics/collect.js"
+    ],
+    "ANALYTICS_HASH_SALT": [
+      "api/analytics/collect.js"
+    ],
+    "SEARCH_CONSOLE_SITE_URL": [
       "api/metrics/service.js"
     ],
     "OPENAI_API_KEY": [

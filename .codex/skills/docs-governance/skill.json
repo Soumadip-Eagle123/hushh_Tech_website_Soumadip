@@ -1,0 +1,62 @@
+{
+  "id": "docs-governance",
+  "role": "owner",
+  "owner_family": "docs-governance",
+  "primary_scope": "docs-governance-intake",
+  "description": "Use when PR triage or patching depends on contributor docs, policy docs, or documentation placement and wording.",
+  "owned_paths": [
+    "README.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "docs/reference/README.md"
+  ],
+  "non_owned_paths": [
+    "repo-context",
+    "oss-contribution-triage",
+    "repo-operations",
+    "frontend",
+    "backend"
+  ],
+  "task_types": [
+    "contribution-triage"
+  ],
+  "required_reads": [
+    "README.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "docs/reference/README.md",
+    "docs/reference/operations/oss-contribution-triage.md"
+  ],
+  "required_commands": [
+    "git diff --check",
+    "rg -n \"PR Agent|CI Status Gate|Patch-and-merge|Discard/close\" README.md CONTRIBUTING.md SECURITY.md docs"
+  ],
+  "verification_bundles": [
+    {
+      "id": "docs-governance",
+      "commands": [
+        "git diff --check",
+        "rg -n \"PR Agent|CI Status Gate|Patch-and-merge|Discard/close\" README.md CONTRIBUTING.md SECURITY.md docs"
+      ],
+      "tests": [
+        "git diff --check"
+      ]
+    }
+  ],
+  "handoff_targets": [
+    "oss-contribution-triage",
+    "repo-context",
+    "repo-operations",
+    "frontend",
+    "backend"
+  ],
+  "adjacent_skills": [
+    "repo-context",
+    "oss-contribution-triage",
+    "repo-operations"
+  ],
+  "risk_tags": [
+    "policy-drift",
+    "docs-placement-drift"
+  ]
+}

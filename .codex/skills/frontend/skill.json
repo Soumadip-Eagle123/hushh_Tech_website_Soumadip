@@ -1,0 +1,62 @@
+{
+  "id": "frontend",
+  "role": "owner",
+  "owner_family": "frontend",
+  "primary_scope": "frontend-intake",
+  "description": "Use when a contributor PR touches Hushhtech web pages, components, hooks, or frontend services and the correct narrower frontend spoke is not yet obvious.",
+  "owned_paths": [
+    "src",
+    "public"
+  ],
+  "non_owned_paths": [
+    "frontend-design-system",
+    "quality-contracts",
+    "security-audit",
+    "repo-operations"
+  ],
+  "task_types": [
+    "contribution-triage"
+  ],
+  "required_reads": [
+    "src/App.tsx",
+    "docs/project_context_map.md",
+    "docs/reference/quality/design-system.md",
+    "package.json"
+  ],
+  "required_commands": [
+    "npm test",
+    "npx tsc --noEmit",
+    "npm run build:web"
+  ],
+  "verification_bundles": [
+    {
+      "id": "frontend",
+      "commands": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ],
+      "tests": [
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run build:web"
+      ]
+    }
+  ],
+  "handoff_targets": [
+    "frontend-design-system",
+    "oss-contribution-triage",
+    "quality-contracts",
+    "security-audit"
+  ],
+  "adjacent_skills": [
+    "frontend-design-system",
+    "quality-contracts",
+    "security-audit"
+  ],
+  "risk_tags": [
+    "ui-regression",
+    "route-regression",
+    "front-end-drift"
+  ]
+}

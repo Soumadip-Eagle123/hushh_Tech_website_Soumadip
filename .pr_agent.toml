@@ -4,44 +4,76 @@ fallback_models = ["vertex_ai/gemini-2.5-flash", "gpt-5"]
 max_model_tokens = 128000
 custom_model_max_tokens = 1048576
 ai_timeout = 480
-output_relevant_configurations = true
+output_relevant_configurations = false
+add_repo_metadata = true
+add_repo_metadata_file_list = ["AGENTS.md", "QODO.MD", "pr_compliance_checklist.yaml"]
 
 [pr_reviewer]
-inline_code_comments = true
-estimate_effort = true
+require_tests_review = true
+require_security_review = true
+require_ticket_analysis_review = true
+require_estimate_effort_to_review = false
+publish_output_no_suggestions = false
 persistent_comment = true
-final_update_message = true
+num_max_findings = 3
+final_update_message = false
+enable_intro_text = false
 extra_instructions = """\
-Review this repository like a production web app with deploy-sensitive auth and API paths.
+Act as Hushh Signalkeeper: the first production-grade reviewer for this repository.
 
+Surface only high-confidence, merge-relevant findings.
 Prioritize:
 - production-breaking behavior and regressions
 - security issues, secret leaks, and auth/session flaws
-- missing or incorrect environment-variable handling
-- CI/CD mistakes, especially anything that weakens required checks or allows unsafe deploy paths
+- missing or incorrect environment-variable wiring
+- CI/CD mistakes that weaken required checks or permit unsafe deploy paths
 - API route correctness, input validation, and fail-closed behavior
 - missing tests or smoke coverage for risky changes
 
-Do not spend review budget on minor style nits unless they hide a real defect.
-Call out concrete files and behaviors. Prefer actionable comments over generic praise.
+For each finding, point to the exact file and behavior, explain the production impact, and say what guardrail or test is missing.
+Do not praise the PR, restate the diff, or suggest style-only cleanups unless they hide a real defect.
+Prefer silence over low-signal commentary when the change looks safe.
+Use AGENTS.md, QODO.MD, pr_compliance_checklist.yaml, best_practices.md, and docs/project_context_map.md as grounding context when available.
+If a claim is not supported by the diff or those repository sources, say that the evidence is not shown in this repository instead of inferring hidden behavior.
 """
 
 [pr_description]
+final_update_message = false
 extra_instructions = """\
 Keep summaries brief and reviewer-friendly.
 Highlight deploy, auth, API, security, and environment impacts explicitly when present.
 Do not replace a strong human-written PR title with a weaker generic one.
+Avoid filler praise and avoid repeating low-risk file-by-file noise.
 """
 
 [pr_code_suggestions]
 focus_only_on_problems = true
-suggestions_depth = "exhaustive"
-num_code_suggestions = 8
-num_code_suggestions_per_chunk = 12
-num_best_practice_suggestions = 12
-suggestions_score_threshold = 7
-dual_publishing_score_threshold = 8
+suggestions_depth = "selective"
+num_code_suggestions_per_chunk = 2
+max_number_of_calls = 2
+num_best_practice_suggestions = 2
+suggestions_score_threshold = 8
+dual_publishing_score_threshold = -1
+publish_output_no_suggestions = false
 commitable_code_suggestions = false
+extra_instructions = """\
+Only suggest code changes when they address a concrete correctness, security, deploy-safety, or operational reliability issue in this PR.
+Skip stylistic, speculative, or broad refactor suggestions.
+"""
+
+[pr_compliance]
+persistent_comment = true
+enable_user_defined_compliance_labels = true
+enable_compliance_labels_security = true
+enable_security_compliance = true
+enable_estimate_effort_to_review = false
+enable_update_pr_compliance_checkbox = true
+enable_help_text = false
+extra_instructions = """\
+Use pr_compliance_checklist.yaml as the repository-specific blocking policy for Hushh Tech.
+Focus on auth/session safety, environment contract integrity, browser-secret boundaries, Cloud Run runtime correctness, deploy guardrails, and Supabase/data-contract safety.
+Do not emit style-only or low-signal compliance findings.
+"""
 
 [best_practices]
-organization_name = "Hushh"
+organization_name = "Hushh Signalkeeper"

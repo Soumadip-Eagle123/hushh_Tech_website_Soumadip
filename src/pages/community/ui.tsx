@@ -33,6 +33,7 @@ export default function CommunityPage() {
     session,
     onCategoryChange,
     handleBackClick,
+    handlePostClick,
     setNdaApproved,
     getPostDescription,
     formatDisplayDate,
@@ -120,6 +121,7 @@ export default function CommunityPage() {
                 key={post.id}
                 to={getPostUrl(post)}
                 className="block group"
+                onClick={() => handlePostClick(post)}
               >
                 <article
                   className={`py-6 ${

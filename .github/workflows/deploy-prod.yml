@@ -96,22 +96,38 @@ jobs:
           set -euo pipefail
           supabase_url="$(gcloud secrets versions access latest --project="$SHARED_SECRETS_PROJECT" --secret="SUPABASE_URL")"
           supabase_anon_key="$(gcloud secrets versions access latest --project="$SHARED_SECRETS_PROJECT" --secret="SUPABASE_ANON_KEY")"
-          supabase_service_role_key="$(gcloud secrets versions access latest --project="$SHARED_SECRETS_PROJECT" --secret="SUPABASE_SERVICE_ROLE_KEY")"
           if [ -z "$supabase_url" ] || [ -z "$supabase_anon_key" ]; then
             echo "::error::Supabase web auth secrets are empty"
             exit 1
           fi
-          if [ -z "$supabase_service_role_key" ]; then
-            echo "::error::Supabase service role secret is empty"
-            exit 1
-          fi
+
+          runtime_secret_names=(
+            hushh-tech-supabase-url
+            hushh-tech-supabase-service-role-key
+            hushh-tech-analytics-hash-salt
+            hushh-tech-metrics-ga4-property-id
+            hushh-tech-metrics-ga4-allowed-hostnames
+            hushh-tech-metrics-gcp-monitoring-project-id
+            hushh-tech-metrics-gcp-cloud-run-region
+            hushh-tech-metrics-gcp-cloud-run-services
+            hushh-tech-metrics-search-console-site-url
+            hushh-tech-metrics-search-console-type
+            hushh-tech-metrics-search-console-data-state
+            hushh-tech-metrics-search-console-row-limit
+            hushh-tech-metrics-looker-studio-embed-url
+          )
+
+          for secret_name in "${runtime_secret_names[@]}"; do
+            if ! gcloud secrets describe "$secret_name" --project=hushh-tech-prod >/dev/null 2>&1; then
+              echo "::error::Required production runtime secret '$secret_name' is missing"
+              exit 1
+            fi
+          done
+
           echo "::add-mask::$supabase_url"
           echo "::add-mask::$supabase_anon_key"
-          echo "::add-mask::$supabase_service_role_key"
           printf 'VITE_SUPABASE_URL=%s\n' "$supabase_url" >> "$GITHUB_ENV"
           printf 'VITE_SUPABASE_ANON_KEY=%s\n' "$supabase_anon_key" >> "$GITHUB_ENV"
-          printf 'SUPABASE_URL=%s\n' "$supabase_url" >> "$GITHUB_ENV"
-          printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$supabase_service_role_key" >> "$GITHUB_ENV"
 
       # 3. Build Vite app in runner (FAST)
       - name: Validate client auth env
@@ -136,7 +152,22 @@ jobs:
 
       # 4. Deploy pre-built dist/ to Cloud Run (runtime-only Dockerfile)
       - name: Deploy to Cloud Run
+        shell: bash
         run: |
+          runtime_env="NODE_ENV=production"
+          runtime_secrets="SUPABASE_URL=hushh-tech-supabase-url:latest"
+          runtime_secrets+=",SUPABASE_SERVICE_ROLE_KEY=hushh-tech-supabase-service-role-key:latest"
+          runtime_secrets+=",ANALYTICS_HASH_SALT=hushh-tech-analytics-hash-salt:latest"
+          runtime_secrets+=",GA4_PROPERTY_ID=hushh-tech-metrics-ga4-property-id:latest"
+          runtime_secrets+=",GA4_ALLOWED_HOSTNAMES=hushh-tech-metrics-ga4-allowed-hostnames:latest"
+          runtime_secrets+=",GCP_MONITORING_PROJECT_ID=hushh-tech-metrics-gcp-monitoring-project-id:latest"
+          runtime_secrets+=",GCP_CLOUD_RUN_REGION=hushh-tech-metrics-gcp-cloud-run-region:latest"
+          runtime_secrets+=",GCP_CLOUD_RUN_SERVICES=hushh-tech-metrics-gcp-cloud-run-services:latest"
+          runtime_secrets+=",SEARCH_CONSOLE_SITE_URL=hushh-tech-metrics-search-console-site-url:latest"
+          runtime_secrets+=",SEARCH_CONSOLE_TYPE=hushh-tech-metrics-search-console-type:latest"
+          runtime_secrets+=",SEARCH_CONSOLE_DATA_STATE=hushh-tech-metrics-search-console-data-state:latest"
+          runtime_secrets+=",SEARCH_CONSOLE_ROW_LIMIT=hushh-tech-metrics-search-console-row-limit:latest"
+          runtime_secrets+=",LOOKER_STUDIO_EMBED_URL=hushh-tech-metrics-looker-studio-embed-url:latest"
           gcloud run deploy hushh-tech-website \
             --source . \
             --project=hushh-tech-prod \
@@ -148,7 +179,8 @@ jobs:
             --min-instances=1 \
             --max-instances=10 \
             --port=8080 \
-            --update-env-vars="NODE_ENV=production,SUPABASE_URL=${SUPABASE_URL},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" \
+            --update-env-vars="$runtime_env" \
+            --update-secrets="$runtime_secrets" \
             --clear-base-image \
             --quiet
 

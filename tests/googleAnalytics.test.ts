@@ -2,6 +2,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const trackPageViewEvent = vi.fn();
+
+vi.mock("../src/services/analytics/siteAnalytics", () => ({
+  sanitizeAnalyticsPath: (pathname: string) => pathname.split("?")[0].split("#")[0],
+  trackPageViewEvent,
+}));
+
 describe("google analytics client tracking", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -10,6 +17,7 @@ describe("google analytics client tracking", () => {
     window.gtag = undefined as unknown as Window["gtag"];
     document.title = "Metrics";
     window.history.replaceState({}, "", "/");
+    trackPageViewEvent.mockClear();
   });
 
   afterEach(() => {
@@ -46,8 +54,13 @@ describe("google analytics client tracking", () => {
     expect(pageViewEvents).toHaveLength(1);
     expect(pageViewEvents[0][2]).toMatchObject({
       page_title: "Metrics",
-      page_path: "/metrics?view=public",
-      page_location: "http://localhost:3000/metrics?view=public",
+      page_path: "/metrics",
+      page_location: "http://localhost:3000/metrics",
     });
+    expect(trackPageViewEvent).toHaveBeenCalledWith(
+      "/metrics",
+      "?view=public",
+      ""
+    );
   });
 });

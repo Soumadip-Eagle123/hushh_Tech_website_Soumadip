@@ -1,0 +1,64 @@
+{
+  "id": "repo-context",
+  "role": "owner",
+  "owner_family": "repo-context",
+  "primary_scope": "repo-context-intake",
+  "description": "Use when a request starts with scanning Hushhtech, mapping repo surfaces, or choosing which owner skill should take the next step.",
+  "owned_paths": [
+    ".codex/skills/README.md",
+    "docs/project_context_map.md",
+    "docs/reference/operations/skill-taxonomy.md"
+  ],
+  "non_owned_paths": [
+    "oss-contribution-triage",
+    "repo-operations",
+    "security-audit",
+    "docs-governance",
+    "frontend",
+    "backend"
+  ],
+  "task_types": [
+    "contribution-triage"
+  ],
+  "required_reads": [
+    ".codex/skills/README.md",
+    "docs/project_context_map.md",
+    "docs/reference/operations/skill-taxonomy.md"
+  ],
+  "required_commands": [
+    "rg --files .github/workflows scripts/ci src api tests docs",
+    "node -e 'const p=require(\"./package.json\"); console.log(JSON.stringify(p.scripts,null,2))'"
+  ],
+  "verification_bundles": [
+    {
+      "id": "repo-context",
+      "commands": [
+        "rg --files .github/workflows scripts/ci src api tests docs",
+        "node -e 'const p=require(\"./package.json\"); console.log(JSON.stringify(p.scripts,null,2))'"
+      ],
+      "tests": [
+        "rg --files .github/workflows scripts/ci src api tests docs"
+      ]
+    }
+  ],
+  "handoff_targets": [
+    "oss-contribution-triage",
+    "repo-operations",
+    "security-audit",
+    "docs-governance",
+    "frontend",
+    "backend"
+  ],
+  "adjacent_skills": [
+    "oss-contribution-triage",
+    "repo-operations",
+    "security-audit",
+    "docs-governance",
+    "frontend",
+    "backend"
+  ],
+  "risk_tags": [
+    "routing-drift",
+    "surface-ownership-drift"
+  ]
+}

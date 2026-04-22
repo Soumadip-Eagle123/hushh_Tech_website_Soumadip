@@ -1,4 +1,35 @@
-# Disable CodeRabbit AI reviews to speed up PR merge times
-# CodeRabbit was adding 1-3 min delay on every PR
+# Stage 0: keep CodeRabbit disabled while Hushh Signalkeeper is the only active AI reviewer.
+# This file is a scaffold for later progressive enforcement, not a second live reviewer.
 reviews:
   enabled: false
+
+# Stage 1 candidate rollout after the sticky walkthrough and semantic guard prove signal:
+#
+# pre_merge_checks:
+#   title:
+#     mode: error
+#   description:
+#     mode: error
+#   issue_assessment:
+#     mode: warning
+#
+# request_changes_workflow: true
+# override_requested_reviewers_only: true
+#
+# path_instructions:
+#   - path: "api/**"
+#     instructions: "Focus on API contract compatibility, fail-closed behavior, and runtime safety."
+#   - path: "src/services/authentication/**"
+#     instructions: "Focus on token lifecycle, session invalidation, and browser secret boundaries."
+#   - path: "supabase/**"
+#     instructions: "Focus on migration impact, rollback notes, and data-contract compatibility."
+#   - path: ".github/workflows/**"
+#     instructions: "Focus on trigger safety, fork behavior, and whether checks still represent the merge result."
+#
+# custom_checks:
+#   - name: "Browser secret boundary"
+#     prompt: "Flag browser-visible env usage or client-side code that appears to expose secrets, service-role credentials, or private keys."
+#   - name: "Breaking change disclosure"
+#     prompt: "Flag PRs that change API, env, schema, or deploy behavior without clearly disclosing the impact in the PR body."
+#   - name: "Rollback and migration notes"
+#     prompt: "Flag PRs that touch deploy or schema-sensitive surfaces without concrete rollback, migration, or env notes."

@@ -9,6 +9,7 @@ Templates covered:
 - `nda-signed-notification`
 - `coins-credit-notification`
 - `coins-deduction-notification`
+- `vault-access-notification`
 
 ## Why This Was Needed
 
@@ -102,6 +103,7 @@ Deploy order used:
 1. `nda-signed-notification`
 2. `coins-credit-notification`
 3. `coins-deduction-notification`
+4. `vault-access-notification`
 
 ## Future Recommendation
 

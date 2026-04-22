@@ -1,0 +1,46 @@
+# Hushh Tech first-pass Qodo PR compliance checklist.
+# Keep this file focused on blocking standards that protect production behavior,
+# security boundaries, and the existing PR Validation gate.
+
+pr_compliances:
+  - title: "Required PR Validation Integrity"
+    compliance_label: true
+    objective: "Pull requests must not weaken the authoritative pre-merge validation gate for this repository."
+    success_criteria: "Changes to .github/workflows/**, scripts/ci/**, package scripts, or CI helpers preserve the required PR Validation jobs and their blocking behavior: DCO, Secret Scan, Env Contract Check, PR Hygiene, Web Validation, Lint, Security Audit, and CI Status Gate. Advisory lanes such as Signalkeeper Preflight, Hushh Signalkeeper, and Semantic PR Guard are not presented as replacements for PR Validation."
+    failure_criteria: "A PR removes, bypasses, skips, or makes non-blocking any required validation job; adds continue-on-error or || true style suppression to required checks; or changes CI so advisory review lanes can substitute for the code-executing PR Validation gate."
+
+  - title: "Environment Contract Completeness"
+    compliance_label: true
+    objective: "New or changed required environment variables must be wired end-to-end across local examples, type declarations, CI validation, and deployed runtime surfaces."
+    success_criteria: "When the diff adds or changes required environment usage, the same change also updates the relevant contract files such as .env.local.example, src/vite-env.d.ts, scripts/ci/env-contract.json, and any workflow or runtime wiring needed for the affected browser, server, or deploy path."
+    failure_criteria: "A PR introduces or changes required environment variables without updating the checked-in environment contract, without the corresponding workflow/runtime injection, or with browser/server scope mismatches that would leave the application undeployable or broken after merge."
+
+  - title: "Browser Secret Boundary"
+    compliance_label: true
+    objective: "Browser-visible code and Vite environment variables must not expose non-public credentials, service-role secrets, or production-only vendor tokens."
+    success_criteria: "Client-side changes under src/** and browser-facing env usage keep secret material on the server side, in API/runtime code, or in secret management. VITE_* values are treated as intentionally public only, and VITE_ALLOW_INSECURE_BROWSER_LLM is not enabled in CI, UAT, or production code paths."
+    failure_criteria: "A PR places sensitive credentials in VITE_* variables, commits secret-like values into browser code, exposes service-role or private vendor keys to the client bundle, or weakens the repository's insecure-browser-LLM guardrails."
+
+  - title: "Auth and API Fail-Closed Behavior"
+    compliance_label: true
+    objective: "Auth, session, and API changes must validate input, preserve authorization boundaries, and fail closed on missing secrets or invalid state."
+    success_criteria: "Changes to src/auth/**, src/services/authentication/**, api/**, api/shared/**, or server.js preserve logout/session invalidation behavior, reject invalid or incomplete input, keep privileged data paths scoped correctly, and avoid leaking internal errors or silently accepting unsafe fallback behavior."
+    failure_criteria: "A PR weakens auth/session invalidation, relaxes authorization or tenant boundaries, allows missing secret/config states to continue silently, removes meaningful input validation, or changes API/error behavior so unsafe requests succeed or internal details are exposed."
+
+  - title: "Cloud Run Runtime Route Integrity"
+    compliance_label: true
+    objective: "The deployed web runtime must stay coherent when route handlers, imports, or runtime entrypoints change."
+    success_criteria: "Changes affecting api/**, server.js, cloud-run/**, or runtime-facing imports keep handler registration, file paths, and deploy packaging aligned with the actual Cloud Run runtime. Route renames, removals, or moved files remain reflected in the serving layer, and server runtime code does not depend on browser-only modules unless the deploy artifact explicitly includes them."
+    failure_criteria: "A PR renames or removes runtime handlers without keeping server.js or the deployed route map in sync, causes API requests to fall through incorrectly to SPA handling, or points server/runtime code at paths that are not actually present in the production artifact."
+
+  - title: "Deploy Path Guardrails"
+    compliance_label: true
+    objective: "Pull request automation must preserve the repository's guarded deploy model: PRs validate, green main SHAs smoke, then promotion flows handle UAT and PROD."
+    success_criteria: "Changes to workflows, deploy scripts, Docker/runtime files, or release logic keep deploys off pull_request lanes, preserve main-branch smoke and promotion requirements, and maintain explicit gated promotion behavior for UAT and production."
+    failure_criteria: "A PR introduces deploy behavior into pull_request workflows, weakens main-branch smoke or promotion gating, bypasses SHA/provenance controls, or makes UAT/production deployment possible without the repository's guarded merge-and-smoke path."
+
+  - title: "Supabase and Data Contract Safety"
+    compliance_label: true
+    objective: "Schema, policy, and Supabase contract changes must remain consistent with the runtime and application paths that depend on them."
+    success_criteria: "Changes under supabase/**, data-related API routes, or data-dependent UI/runtime flows keep migrations, policies, and consuming code aligned so the application still matches the checked-in schema and access expectations."
+    failure_criteria: "A PR changes Supabase migrations, policies, or data contracts in a way that leaves dependent API/runtime/UI assumptions out of sync, weakens sensitive data access boundaries, or introduces a breaking schema expectation without corresponding application updates."

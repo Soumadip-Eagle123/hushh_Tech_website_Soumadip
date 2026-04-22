@@ -1,48 +1,240 @@
-name: PR Agent
+name: Hushh Signalkeeper
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review, review_requested]
+    types: [opened, synchronize, reopened, ready_for_review]
   issue_comment:
     types: [created]
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
+permissions: {}
 
 env:
   PR_AGENT_VERTEX_PROJECT: "hushone-app"
   PR_AGENT_VERTEX_LOCATION: "us-central1"
 
+concurrency:
+  group: hushh-signalkeeper-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   pr_agent:
-    name: AI Code Review (Gemini)
+    name: Hushh Signalkeeper
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      id-token: write
     if: >
       github.event.sender.type != 'Bot' &&
       (
-        github.event_name == 'pull_request_target' ||
+        (github.event_name == 'pull_request_target' &&
+         github.event.pull_request.state == 'open' &&
+         !github.event.pull_request.draft) ||
         (github.event_name == 'issue_comment' &&
-         github.event.issue.pull_request &&
-         contains(github.event.comment.body, '/'))
+         github.event.issue.pull_request)
       )
-    
+
     steps:
-      - name: Capture PR agent verification window
-        id: agent-window
+      - name: Resolve execution policy
+        id: trigger_policy
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          should_run=true
+          trusted_commenter=true
+          allowed_command=true
+          comment_association=""
+          slash_command=""
+          pr_number=""
+
+          if [ "$GITHUB_EVENT_NAME" = "pull_request_target" ]; then
+            checkout_ref="$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH")"
+          else
+            pr_number="$(jq -r '.issue.number // empty' "$GITHUB_EVENT_PATH")"
+            if [ -z "$pr_number" ]; then
+              echo "::error::Unable to resolve PR number from issue_comment event payload."
+              exit 1
+            fi
+
+            checkout_ref="$(curl -fsSL \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" | jq -r '.base.sha // empty')"
+
+            if [ -z "$checkout_ref" ]; then
+              echo "::error::Unable to resolve PR base SHA for issue_comment-triggered Signalkeeper run."
+              exit 1
+            fi
+          fi
+
+          if [ "$GITHUB_EVENT_NAME" = "issue_comment" ]; then
+            comment_association="$(jq -r '.comment.author_association // ""' "$GITHUB_EVENT_PATH")"
+            slash_command="$(jq -r '.comment.body // ""' "$GITHUB_EVENT_PATH" | sed -n '1p' | awk '{print $1}')"
+
+            case "$comment_association" in
+              OWNER|MEMBER|COLLABORATOR)
+                trusted_commenter=true
+                ;;
+              *)
+                trusted_commenter=false
+                ;;
+            esac
+
+            case "$slash_command" in
+              /review|/describe|/improve|/improve_code|/ask|/analyze|/compliance|/checks)
+                allowed_command=true
+                ;;
+              *)
+                allowed_command=false
+                ;;
+            esac
+
+            if [ "$trusted_commenter" != true ] || [ "$allowed_command" != true ]; then
+              should_run=false
+            fi
+          fi
+
+          {
+            echo "should_run=$should_run"
+            echo "trusted_commenter=$trusted_commenter"
+            echo "allowed_command=$allowed_command"
+            echo "comment_association=$comment_association"
+            echo "slash_command=$slash_command"
+            echo "checkout_ref=$checkout_ref"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$should_run" != true ]; then
+            echo "Skipping Hushh Signalkeeper trigger: trusted_commenter=$trusted_commenter allowed_command=$allowed_command association=${comment_association:-<none>} command=${slash_command:-<none>}."
+          fi
+
+      - name: Resolve Google auth mode
+        if: ${{ steps.trigger_policy.outputs.should_run == 'true' }}
+        id: auth_mode
+        shell: bash
+        env:
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GCP_SA_KEY_UAT: ${{ secrets.GCP_SA_KEY_UAT }}
+        run: |
+          set -euo pipefail
+
+          preferred_auth="none"
+          has_legacy_key=false
+
+          if [ -n "$GCP_SA_KEY_UAT" ]; then
+            has_legacy_key=true
+          fi
+
+          if [ -n "$GCP_WORKLOAD_IDENTITY_PROVIDER" ] && [ -n "$GCP_SERVICE_ACCOUNT" ]; then
+            preferred_auth="oidc_service_account"
+          elif [ -n "$GCP_WORKLOAD_IDENTITY_PROVIDER" ]; then
+            preferred_auth="oidc_direct"
+          elif [ "$has_legacy_key" = true ]; then
+            preferred_auth="legacy_key"
+          fi
+
+          {
+            echo "preferred_auth=$preferred_auth"
+            echo "has_legacy_key=$has_legacy_key"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$preferred_auth" = "none" ]; then
+            echo "::error::Missing Google auth configuration. Configure GCP_WORKLOAD_IDENTITY_PROVIDER for OIDC, or keep GCP_SA_KEY_UAT as the legacy fallback."
+            exit 1
+          fi
+
+      - name: Prepare trusted workspace
+        if: ${{ steps.trigger_policy.outputs.should_run == 'true' }}
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ steps.trigger_policy.outputs.checkout_ref }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Capture Signalkeeper verification window
+        if: ${{ steps.trigger_policy.outputs.should_run == 'true' }}
+        id: agent_window
         shell: bash
         run: printf 'started_at=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_OUTPUT"
 
-      - name: Authenticate to GCP for PR review
-        uses: google-github-actions/auth@v3
+      - name: Authenticate to Google Cloud via OIDC
+        if: ${{ steps.auth_mode.outputs.preferred_auth == 'oidc_direct' }}
+        id: auth_oidc_direct
+        continue-on-error: true
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
+          project_id: ${{ env.PR_AGENT_VERTEX_PROJECT }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Authenticate to Google Cloud via OIDC service account impersonation
+        if: ${{ steps.auth_mode.outputs.preferred_auth == 'oidc_service_account' }}
+        id: auth_oidc_service_account
+        continue-on-error: true
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: ${{ env.PR_AGENT_VERTEX_PROJECT }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Authenticate to Google Cloud via legacy service account key
+        if: ${{ steps.auth_mode.outputs.preferred_auth == 'legacy_key' || (steps.auth_mode.outputs.preferred_auth == 'oidc_direct' && steps.auth_oidc_direct.outcome == 'failure' && steps.auth_mode.outputs.has_legacy_key == 'true') || (steps.auth_mode.outputs.preferred_auth == 'oidc_service_account' && steps.auth_oidc_service_account.outcome == 'failure' && steps.auth_mode.outputs.has_legacy_key == 'true') }}
+        id: auth_legacy_key
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: ${{ env.PR_AGENT_VERTEX_PROJECT }}
           credentials_json: ${{ secrets.GCP_SA_KEY_UAT }}
           create_credentials_file: true
           export_environment_variables: true
 
-      - name: PR Agent Action
-        uses: qodo-ai/pr-agent@main
+      - name: Confirm Google auth succeeded
+        if: ${{ steps.trigger_policy.outputs.should_run == 'true' }}
+        shell: bash
+        env:
+          PREFERRED_AUTH: ${{ steps.auth_mode.outputs.preferred_auth }}
+          OIDC_DIRECT_OUTCOME: ${{ steps.auth_oidc_direct.outcome }}
+          OIDC_SERVICE_ACCOUNT_OUTCOME: ${{ steps.auth_oidc_service_account.outcome }}
+          LEGACY_KEY_OUTCOME: ${{ steps.auth_legacy_key.outcome }}
+        run: |
+          set -euo pipefail
+
+          case "$PREFERRED_AUTH" in
+            oidc_direct)
+              if [ "$OIDC_DIRECT_OUTCOME" = "success" ]; then
+                exit 0
+              fi
+              ;;
+            oidc_service_account)
+              if [ "$OIDC_SERVICE_ACCOUNT_OUTCOME" = "success" ]; then
+                exit 0
+              fi
+              ;;
+            legacy_key)
+              if [ "$LEGACY_KEY_OUTCOME" = "success" ]; then
+                exit 0
+              fi
+              ;;
+          esac
+
+          if [ "$LEGACY_KEY_OUTCOME" = "success" ]; then
+            echo "Google auth fell back to the legacy service account key."
+            exit 0
+          fi
+
+          echo "::error::Google Cloud authentication did not succeed via OIDC or the legacy fallback."
+          exit 1
+
+      - name: Hushh Signalkeeper review
+        id: signalkeeper
+        if: ${{ steps.trigger_policy.outputs.should_run == 'true' }}
+        uses: The-PR-Agent/pr-agent@d82f7d3e696cd00822694aaa3096265d3889f3f1 # v0.34
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
@@ -53,65 +245,20 @@ jobs:
           config.max_model_tokens: "128000"
           config.custom_model_max_tokens: "1048576"
           config.ai_timeout: "480"
+          github.app_name: "hushh-signalkeeper"
+          pr_reviewer.extra_instructions: "Present the reviewer as Hushh Signalkeeper when you reference the reviewer in output."
           github_action_config.auto_review: "true"
-          github_action_config.auto_describe: "true"
-          github_action_config.auto_improve: "true"
-          github_action_config.pr_actions: '["opened","synchronize","reopened","ready_for_review","review_requested"]'
+          github_action_config.auto_describe: "false"
+          github_action_config.auto_improve: "false"
+          github_action_config.pr_actions: '["opened","synchronize","reopened","ready_for_review"]'
 
-      - name: Verify PR agent produced usable review output
-        if: always()
+      - name: Verify Signalkeeper produced usable review output
+        if: ${{ always() && steps.signalkeeper.outcome != 'skipped' }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_AGENT_STARTED_AT: ${{ steps.agent-window.outputs.started_at }}
+          PR_AGENT_STARTED_AT: ${{ steps.agent_window.outputs.started_at }}
         run: |
           set -euo pipefail
-
-          pr_number="$(jq -r '.pull_request.number // .issue.number // empty' "$GITHUB_EVENT_PATH")"
-          if [ -z "$pr_number" ]; then
-            echo "::error::Unable to resolve pull request number from event payload."
-            exit 1
-          fi
-
-          issue_comments="$(curl -fsSL \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments?per_page=100")"
-
-          reviews="$(curl -fsSL \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${pr_number}/reviews?per_page=100")"
-
-          failure_comment_count="$(echo "$issue_comments" | jq --arg since "$PR_AGENT_STARTED_AT" '
-            [.[] | select(
-              .user.login == "github-actions[bot]" and
-              .created_at >= $since and
-              .body == "Failed to generate code suggestions for PR"
-            )] | length
-          ')"
-
-          if [ "$failure_comment_count" -gt 0 ]; then
-            echo "::error::PR agent failed to generate usable review output."
-            exit 1
-          fi
-
-          issue_comment_count="$(echo "$issue_comments" | jq --arg since "$PR_AGENT_STARTED_AT" '
-            [.[] | select(
-              .user.login == "github-actions[bot]" and
-              .created_at >= $since and
-              (.body | length) > 0
-            )] | length
-          ')"
-
-          review_count="$(echo "$reviews" | jq --arg since "$PR_AGENT_STARTED_AT" '
-            [.[] | select(
-              .user.login == "github-actions[bot]" and
-              (.submitted_at // "") >= $since
-            )] | length
-          ')"
-
-          if [ $((issue_comment_count + review_count)) -eq 0 ]; then
-            echo "::error::PR agent completed without publishing any visible review output."
-            exit 1
-          fi
+          node scripts/ci/verify-pr-agent-output.mjs \
+            --report-path "$RUNNER_TEMP/hushh-signalkeeper-report.json"
