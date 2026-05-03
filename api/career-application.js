@@ -14,10 +14,7 @@ const ALLOWED_COLLEGES = new Set(['LPU', 'MIT']);
 const sanitizeString = (value) => (typeof value === 'string' ? value.trim() : '');
 
 const parseRequestBody = (body) => {
-  if (!body) {
-    return {};
-  }
-
+  if (!body) return {};
   if (typeof body === 'string') {
     try {
       return JSON.parse(body);
@@ -25,15 +22,43 @@ const parseRequestBody = (body) => {
       throw new Error('Invalid JSON payload');
     }
   }
-
   return body;
 };
-
 const isValidUrl = (value) => {
   try {
     const parsed = new URL(value);
-    return Boolean(parsed.protocol && parsed.host);
-  } catch (error) {
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+
+    const hostname = parsed.hostname.toLowerCase();
+    const path = parsed.pathname.toLowerCase();
+
+    const REDIRECT_PATHS = ['/url', '/redirect', '/l', '/link'];
+    if (REDIRECT_PATHS.some(p => path === p || path.startsWith(p + '/'))) return false;
+
+    const REDIRECT_PARAMS = ['q', 'url', 'redirect', 'next', 'goto', 'return'];
+    if (REDIRECT_PARAMS.some(p => {
+      const val = (parsed.searchParams.get(p) || '').toLowerCase();
+      return val.startsWith('http://') || val.startsWith('https://') || val.startsWith('//');
+    })) return false;
+
+    const isGoogle = hostname === 'docs.google.com' || hostname === 'drive.google.com';
+    const isDropbox = hostname === 'www.dropbox.com' || hostname === 'dropbox.com';
+    const isAws = hostname.endsWith('.amazonaws.com');
+    const isAzure = hostname.endsWith('.windows.net');
+    const isSharepoint = hostname.endsWith('.sharepoint.com');
+    const isHushh = hostname === 'hushhtech.com' || hostname.endsWith('.hushhtech.com');
+
+    const isTrustedHost = isGoogle || isDropbox || isAws || isAzure || isSharepoint || isHushh;
+
+    const hasDocExtension = path.endsWith('.pdf') ||
+                            path.endsWith('.doc') ||
+                            path.endsWith('.docx');
+
+    const isNotRoot = path.length > 1;
+    const isNotForm = !path.includes('/forms/');
+
+    return isTrustedHost && isNotRoot && isNotForm && (hasDocExtension || isGoogle || isDropbox);
+  } catch {
     return false;
   }
 };
@@ -70,11 +95,10 @@ export default async function handler(request, response) {
     }
 
     if (!isValidUrl(sanitized.resumeLink)) {
-      return response.status(400).json({ error: 'Invalid resume link' });
+      return response.status(400).json({ error: 'Invalid resume link. Please provide a direct link to a PDF or Word document.' });
     }
 
     const submittedAt = sanitized.submittedAt || new Date().toISOString();
-
     const appsScriptUrl = sanitizeString(process.env.GOOGLE_APPS_SCRIPT_URL);
 
     if (!appsScriptUrl) {
@@ -83,13 +107,8 @@ export default async function handler(request, response) {
 
     const scriptResponse = await fetch(appsScriptUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...sanitized,
-        submittedAt,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...sanitized, submittedAt }),
     });
 
     const responseText = await scriptResponse.text();
@@ -104,29 +123,18 @@ export default async function handler(request, response) {
     const scriptSucceeded = scriptResponse.ok && (scriptResult?.success ?? true);
 
     if (!scriptSucceeded) {
-      const message =
-        scriptResult?.error ||
-        scriptResult?.message ||
-        (!scriptResponse.ok ? responseText : '') ||
-        'Apps Script request failed';
+      const message = scriptResult?.error || scriptResult?.message || (!scriptResponse.ok ? responseText : '') || 'Apps Script request failed';
       throw new Error(message);
     }
 
     return response.status(200).json({
       success: true,
       message: 'Application received and saved',
-      data: {
-        ...sanitized,
-        submittedAt,
-        appsScript: scriptResult,
-      },
+      data: { ...sanitized, submittedAt, appsScript: scriptResult },
     });
   } catch (error) {
     console.error('Error processing application:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return response.status(500).json({
-      error: 'Internal server error',
-      message,
-    });
+    return response.status(500).json({ error: 'Internal server error', message });
   }
 }
