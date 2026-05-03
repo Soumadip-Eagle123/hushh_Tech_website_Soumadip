@@ -10,6 +10,7 @@ const REQUIRED_FIELDS = [
 
 const DEFAULT_COUNTRY = "US";
 const DEFAULT_CURRENCY = "USD";
+const FETCH_TIMEOUT_MS = 3000;
 
 async function deriveGeoHints(phone_country_code, phone_number) {
   try {
@@ -155,7 +156,89 @@ function normalizeBudget(budgetPerNight) {
   };
 }
 
+export async function fetchWithRetry(
+  url,
+  options,
+  maxRetries = 2,
+  initialBackoff = 500,
+  maxDuration = 9000
+) {
+  const startTime = Date.now();
+  let attempt = 0;
+  let backoff = initialBackoff;
+
+  while (true) {
+    const elapsed = Date.now() - startTime;
+    const remaining = maxDuration - elapsed;
+
+    if (remaining <= 0) {
+      throw new Error("AI Enrichment timed out before completing retries");
+    }
+    const timeout = Math.min(FETCH_TIMEOUT_MS, remaining);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const retryableStatuses = [502, 503, 504];
+
+      if (!retryableStatuses.includes(response.status)) {
+        return response;
+      }
+
+      if (attempt >= maxRetries) {
+        throw new Error(`AI Enrichment fetch failed with status ${response.status}`);
+      }
+
+    } catch (err) {
+      clearTimeout(timeoutId);
+
+      const isAbortError = err.name === 'AbortError';
+      const isNetworkError =
+      err.name === 'FetchError' ||
+      err.code === 'ECONNRESET' ||
+      err.code === 'ENOTFOUND' ||
+      err.code === 'ETIMEDOUT';
+      if (!isAbortError && !isNetworkError) {
+        throw err; // DO NOT RETRY
+      }
+
+     if (attempt >= maxRetries) {
+       throw new Error(
+         "AI Enrichment fetch failed after maximum retries",
+         { cause: err }
+       );
+      }
+    }
+
+    const nextElapsed = Date.now() - startTime;
+    const nextRemaining = maxDuration - nextElapsed;
+
+    if (nextRemaining <= backoff) {
+      throw new Error("AI Enrichment timed out before completing retries");
+    }
+
+    await new Promise(resolve => setTimeout(resolve, backoff));
+
+    attempt++;
+    backoff *= 2; 
+  }
+}
+
 export default async function handler(request, response) {
+  const OPENAI_API_URL = process.env.OPENAI_API_URL;
+
+   if (!OPENAI_API_URL) {
+  return response.status(500).json({ error: "OPENAI_API_URL is not configured" });
+   }
+
   if (request.method !== "POST") {
     return response.status(405).json({ error: "Method not allowed" });
   }
@@ -210,7 +293,7 @@ Rules:
       ],
     };
 
-    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    const aiResponse = await fetchWithRetry(OPENAI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

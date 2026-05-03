@@ -261,4 +261,4 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/ci/verify-pr-agent-output.mjs \
-            --report-path "$RUNNER_TEMP/hushh-signalkeeper-report.json"
+            --report-path "$RUNNER_TEMP/pr-agent-verification-report.json"

@@ -22,7 +22,7 @@ const parseRequestBody = (body) => {
     try {
       return JSON.parse(body);
     } catch (error) {
-      throw new Error('Invalid JSON payload');
+      throw new Error('Invalid JSON payload', { cause: error });
     }
   }
 
@@ -33,7 +33,7 @@ const isValidUrl = (value) => {
   try {
     const parsed = new URL(value);
     return Boolean(parsed.protocol && parsed.host);
-  } catch (error) {
+  } catch {
     return false;
   }
 };
