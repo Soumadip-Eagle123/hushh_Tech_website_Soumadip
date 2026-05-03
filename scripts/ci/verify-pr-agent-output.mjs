@@ -2,7 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-
+console.log("🚀 USING UPDATED VERIFY SCRIPT v2");
 const DEFAULT_AUTHOR_LOGINS = [
   "github-actions[bot]",
   "qodo-code-review[bot]",
